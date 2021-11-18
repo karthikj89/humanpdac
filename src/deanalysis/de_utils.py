@@ -177,32 +177,33 @@ def fit_DE_model(adata, label, celltype, n_jobs=20):
     celltypeadata = adata
 
     print(f'*** Dataset: {label:>5} Cell type: {celltype:>5} # genes: {celltypeadata.shape[1]:>5} # cells: {celltypeadata.shape[0]:>5} ***')
-    #celltypeadata.obs['pid'] = celltypeadata.obs['pid'].astype('category')
+    celltypeadata.obs['pid'] = celltypeadata.obs['pid'].astype('category')
     celltypeadata.obs['de_analysis'] = celltypeadata.obs['de_analysis'].astype('category')
     
     treatment_col = 'None'
     if 'de_analysis' in celltypeadata.obs.columns:
+        print(set(celltypeadata.obs.de_analysis))
         source_df = pd.get_dummies(celltypeadata.obs.de_analysis)
         for col in source_df.columns:
             celltypeadata.obs[col] = source_df[col].astype('int')
             treatment_col = source_df.columns[source_df.columns!='Untreated'][0]
 
     coef = fit_lme_adata(celltypeadata, 
-                                    #'gene ~ (1|pid) + offset(log(total_counts)) + PCA0 + PCA1 + PCA2 + ' + treatment_col,
-                                    'gene ~ offset(log(cell_counts)) + ' + treatment_col,
-                                    #['pid', 'total_counts', 'PCA0', 'PCA1', 'PCA2', treatment_col],
-                                    ['cell_counts', treatment_col],
-                                    family='gaussian',#'poisson',
-                                    random_effect = False,#True,
-                                    use_raw=False, #True,
+                                    'gene ~ (1|pid) + offset(log(total_counts)) + PCA0 + PCA1 + PCA2 + ' + treatment_col,
+                                    #'gene ~ offset(log(cell_counts)) + ' + treatment_col,
+                                    ['pid', 'total_counts', 'PCA0', 'PCA1', 'PCA2', treatment_col],
+                                    #['cell_counts', treatment_col],
+                                    family='poisson', #'gaussian'
+                                    random_effect = True,#False,
+                                    use_raw=True, #False,
                                     n_jobs=1 #min(n_jobs, celltypeadata.shape[1])
                         )
     
     #coef = compute_pvalues(coef)
     #res.append(coef)
     
-    #sig, pval, _, _ = multipletests(coef['Pr(>|z|)'], method='fdr_bh', alpha=0.1)
-    sig, pval, _, _ = multipletests(coef['Pr(>|t|)'], method='fdr_bh', alpha=0.1)
+    sig, pval, _, _ = multipletests(coef['Pr(>|z|)'], method='fdr_bh', alpha=0.1)
+    #sig, pval, _, _ = multipletests(coef['Pr(>|t|)'], method='fdr_bh', alpha=0.1)
     coef['significant'] = sig
     coef['pval_adj'] = pval
     coef['neglog_pval_adj'] = -np.log10(coef.pval_adj+1e-300)

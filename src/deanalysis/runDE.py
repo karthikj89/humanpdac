@@ -9,9 +9,9 @@ os.environ['R_HOME'] = "/ahg/regevdata/users/kjag/.conda/envs/deanalysis/lib/R"
 
 
 info = sys.argv[1]
-#randomeffect = sys.argv[2]
-gene_idx_start = int(sys.argv[2])
-gene_idx_end = sys.argv[3]
+randomeffect = sys.argv[2]
+gene_idx_start = int(sys.argv[3])
+gene_idx_end = sys.argv[4]
 
 treatmenttype1, _, treatmenttype2, celltype, level = info.split('_')
 print(treatmenttype1, _, treatmenttype2, celltype, level)
@@ -20,6 +20,8 @@ totaldata = sc.read('/ahg/regevdata/projects/Pancreas/cellbender/processed/total
 
 if celltype=='Immune':
     totaldata = totaldata[(totaldata.obs['Level %s Annotation'%level]=='Lymphoid')|(totaldata.obs['Level %s Annotation'%level]=='Myeloid')].copy()
+else:
+    totaldata = totaldata[(totaldata.obs['Level %s Annotation'%level]==celltype)].copy()
 
 print(totaldata.shape)
 
@@ -75,11 +77,11 @@ counts = Counter(totaldata.obs.pid)
 pseudobulkadata.obs['cell_counts'] = [counts.get(pid) for pid in pseudobulkadata.obs_names]
 totaldata.obs['cell_counts'] = [counts.get(pid) for pid in totaldata.obs.pid]
 
-#randomeffect_bool = True if randomeffect=='True' else False
+randomeffect_bool = True if randomeffect=='True' else False
 
 #if randomeffect_bool:
 #    pseudobulkadata = pseudobulkadata[pseudobulkadata.obs['cell_counts'] > 50].copy()
 #    totaldata = totaldata[totaldata.obs['cell_counts'] > 50].copy()
-#res = fit_DE_model(pseudobulkadata, treatmenttype1 + '_' + treatmenttype2, celltype, randomeffect_bool, n_jobs=1)
-res = fit_DE_model(pseudobulkadata, treatmenttype1 + '_' + treatmenttype2, celltype, n_jobs=1)
-res.to_csv("/ahg/regevdata/projects/Pancreas/src/deanalysis/pseudobulk/%s_%d_%d.csv"%(info, gene_idx_start, gene_idx_end))
+res = fit_DE_model(totaldata, treatmenttype1 + '_' + treatmenttype2, celltype, n_jobs=1)
+#res = fit_DE_model(pseudobulkadata, treatmenttype1 + '_' + treatmenttype2, celltype, n_jobs=1)
+res.to_csv("/ahg/regevdata/projects/Pancreas/src/deanalysis/%s_%d_%d.csv"%(info, gene_idx_start, gene_idx_end))
